@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
+            .
+
+      - name: Start container
+        run: |
+          docker run -d \
+            --name diabetes-api \
+            -p 80:80 \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+      - name: Wait for API
+        run: |
+          for i in {1..30}; do
+            if curl --fail http://localhost:80/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs diabetes-api
+          exit 1
+
+      - name: Smoke test health endpoint
+        run: |
+          RESPONSE=$(curl --fail http://localhost:80/health)
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep "\"status\":\"ok\""
+          echo "$RESPONSE" | grep "\"model_version\":\"${{ github.ref_name }}\""
+
+      - name: Smoke test prediction endpoint
+        run: |
+          RESPONSE=$(curl --fail \
+            -X POST http://localhost:80/predict \
+            -H "Content-Type: application/json" \
+            -d '{
+              "age": 0.02,
+              "sex": -0.044,
+              "bmi": 0.06,
+              "bp": -0.03,
+              "s1": -0.02,
+              "s2": 0.03,
+              "s3": -0.02,
+              "s4": 0.02,
+              "s5": 0.02,
+              "s6": -0.001
+            }')
+
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep "\"prediction\":"
+
+      - name: Smoke test invalid input
+        run: |
+          STATUS=$(curl -s -o error.json -w "%{http_code}" \
+            -X POST http://localhost:80/predict \
+            -H "Content-Type: application/json" \
+            -d '{
+              "age": 0.02,
+              "sex": -0.044,
+              "bmi": 0.06,
+              "bp": -0.03,
+              "s1": -0.02,
+              "s2": 0.03,
+              "s3": -0.02,
+              "s4": 0.02,
+              "s5": 0.02
+            }')
+
+          cat error.json
+          test "$STATUS" = "422"
+          grep '"s6"' error.json
+
+      - name: Push Docker image to GHCR
+        run: |
+          docker push \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file CHANGELOG.md \
+            artifacts/metrics.json
