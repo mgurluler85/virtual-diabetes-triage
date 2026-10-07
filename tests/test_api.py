@@ -27,7 +27,7 @@ def test_health():
 
     assert response.json() == {
         "status": "ok",
-        "model_version": "v0.1",
+        "model_version": "v0.2",
     }
 
 

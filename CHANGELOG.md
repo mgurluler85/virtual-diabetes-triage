@@ -1,13 +1,24 @@
 
-
-
-
-
-
-
 # Changelog
 
 All notable changes to this project are documented in this file.
+
+## v0.2
+
+### Model
+- Replaced the v0.1 `StandardScaler + LinearRegression` baseline with `StandardScaler + Ridge(alpha=1.0)`.
+- Used the same 80/20 train-test split and `random_state=42` for a fair comparison.
+- v0.1 RMSE: `53.8534`.
+- v0.2 RMSE: `53.7775`.
+- RMSE delta: `-0.0759` (lower is better).
+- RandomForestRegressor was also evaluated but produced a higher RMSE (`54.4612`), so Ridge was selected for v0.2.
+
+### API
+- Updated the reported model version from `v0.1` to `v0.2`.
+
+### Validation
+- All 6 unit tests pass.
+- Ruff linting passes.
 
 ## v0.1
 

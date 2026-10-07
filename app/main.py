@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 MODEL_PATH = Path("artifacts/model.joblib")
-MODEL_VERSION = "v0.1"
+MODEL_VERSION = "v0.2"
 
 FEATURE_NAMES = [
     "age",

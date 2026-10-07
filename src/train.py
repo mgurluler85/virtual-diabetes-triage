@@ -3,7 +3,7 @@ from pathlib import Path
 
 import joblib
 from sklearn.datasets import load_diabetes
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 from sklearn.metrics import root_mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -36,7 +36,7 @@ def train():
     model = Pipeline(
         steps=[
             ("scaler", StandardScaler()),
-            ("regressor", LinearRegression()),
+            ("regressor", Ridge(alpha=1.0)),
         ]
     )
 
@@ -55,8 +55,8 @@ def train():
 
     # Save evaluation metrics
     metrics = {
-        "model_version": "v0.1",
-        "model": "StandardScaler + LinearRegression",
+        "model_version": "v0.2",
+        "model": "StandardScaler + Ridge(alpha=1.0)",
         "random_state": RANDOM_STATE,
         "test_size": 0.2,
         "rmse": float(rmse),

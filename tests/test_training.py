@@ -54,8 +54,8 @@ def test_metrics_are_saved_correctly():
     with open(METRICS_PATH, encoding="utf-8") as f:
         metrics = json.load(f)
 
-    assert metrics["model_version"] == "v0.1"
-    assert metrics["model"] == "StandardScaler + LinearRegression"
+    assert metrics["model_version"] == "v0.2"
+    assert metrics["model"] == "StandardScaler + Ridge(alpha=1.0)"
     assert metrics["random_state"] == 42
     assert metrics["test_size"] == 0.2
     assert isinstance(metrics["rmse"], float)
