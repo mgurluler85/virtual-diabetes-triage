@@ -6,18 +6,25 @@ The project uses the scikit-learn Diabetes regression dataset as a stand-in for 
 
 ## Model
 
-Version v0.1 uses:
+### v0.1 — Baseline
 
 - StandardScaler
 - LinearRegression
 - 80/20 train-test split
 - random_state=42
+- Held-out test RMSE: `53.8534`
 
-Held-out test RMSE:
+### v0.2 — Improved Model
 
-```text
-53.8534
-```
+- StandardScaler
+- Ridge(alpha=1.0)
+- Same 80/20 train-test split
+- Same random_state=42
+- Held-out test RMSE: `53.7775`
+
+The RMSE improved from `53.8534` in v0.1 to `53.7775` in v0.2, a delta of `-0.0759` (lower is better).
+
+RandomForestRegressor was also evaluated and produced an RMSE of `54.4612`, so Ridge was selected for v0.2.
 
 ## Input Features
 
@@ -84,7 +91,7 @@ Expected response:
 ```json
 {
   "status": "ok",
-  "model_version": "v0.1"
+  "model_version": "v0.2"
 }
 ```
 
@@ -140,13 +147,13 @@ For example, if `s6` is missing, the API returns HTTP 422 with a JSON validation
 Build the Docker image locally:
 
 ```bash
-docker build -t virtual-diabetes-triage:v0.1 .
+docker build -t virtual-diabetes-triage:v0.2 .
 ```
 
 Run the container:
 
 ```bash
-docker run --rm -p 80:80 virtual-diabetes-triage:v0.1
+docker run --rm -p 80:80 virtual-diabetes-triage:v0.2
 ```
 
 Test it:
@@ -157,16 +164,16 @@ curl http://localhost:80/health
 
 ## Published Docker Image
 
-The v0.1 image is publicly available from GitHub Container Registry:
+The v0.2 image is publicly available from GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/mgurluler85/virtual-diabetes-triage:v0.1
+docker pull ghcr.io/mgurluler85/virtual-diabetes-triage:v0.2
 ```
 
 Run the published image:
 
 ```bash
-docker run --rm -p 80:80 ghcr.io/mgurluler85/virtual-diabetes-triage:v0.1
+docker run --rm -p 80:80 ghcr.io/mgurluler85/virtual-diabetes-triage:v0.2
 ```
 
 Then test:
