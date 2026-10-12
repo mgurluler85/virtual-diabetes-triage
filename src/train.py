@@ -32,7 +32,7 @@ def train():
         random_state=RANDOM_STATE,
     )
 
-    # v0.1 baseline model
+    # v0.2 improved model
     model = Pipeline(
         steps=[
             ("scaler", StandardScaler()),
