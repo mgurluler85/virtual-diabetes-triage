@@ -43,7 +43,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install dependencies:
+Install the pinned dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -51,18 +51,28 @@ pip install -r requirements.txt
 
 ## Train the Model
 
+Run:
+
 ```bash
 python src/train.py
 ```
 
-Training creates:
+This trains the v0.2 Ridge model and creates:
 
 ```text
 artifacts/model.joblib
 artifacts/metrics.json
 ```
 
+The expected held-out test RMSE is approximately:
+
+```text
+53.7775
+```
+
 ## Run Tests
+
+Run the unit tests:
 
 ```bash
 python -m pytest -v
@@ -74,7 +84,9 @@ Run linting:
 python -m ruff check .
 ```
 
-## Run the API Locally
+## Run API Locally
+
+Start the FastAPI service:
 
 ```bash
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -97,22 +109,22 @@ Expected response:
 
 ## Prediction
 
-Send a POST request to `/predict`:
+Send all 10 required features to `/predict`:
 
 ```bash
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
   -d '{
-    "age": 0.02,
-    "sex": -0.044,
-    "bmi": 0.06,
-    "bp": -0.03,
-    "s1": -0.02,
-    "s2": 0.03,
-    "s3": -0.02,
-    "s4": 0.02,
-    "s5": 0.02,
-    "s6": -0.001
+    "age": 0.0380759064,
+    "sex": 0.0506801187,
+    "bmi": 0.0616962065,
+    "bp": 0.0218723855,
+    "s1": -0.0442234984,
+    "s2": -0.0348207628,
+    "s3": -0.0434008457,
+    "s4": -0.0025922620,
+    "s5": 0.0199074862,
+    "s6": -0.0176461252
   }'
 ```
 
@@ -120,15 +132,35 @@ Example response:
 
 ```json
 {
-  "prediction": 235.94963722176274
+  "prediction": 226.91314681729324
 }
 ```
 
+The exact prediction is a floating-point value returned by the currently loaded model.
+
 ## Validation Error
 
-All 10 features are required.
+All 10 input features are required.
 
-For example, if `s6` is missing, the API returns HTTP 422 with a JSON validation error containing a structure similar to:
+For example, if `s6` is omitted:
+
+```bash
+curl -i -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "age": 0.0380759064,
+    "sex": 0.0506801187,
+    "bmi": 0.0616962065,
+    "bp": 0.0218723855,
+    "s1": -0.0442234984,
+    "s2": -0.0348207628,
+    "s3": -0.0434008457,
+    "s4": -0.0025922620,
+    "s5": 0.0199074862
+  }'
+```
+
+The API returns HTTP `422 Unprocessable Entity` with a JSON validation error identifying the missing field, for example:
 
 ```json
 {
@@ -144,13 +176,13 @@ For example, if `s6` is missing, the API returns HTTP 422 with a JSON validation
 
 ## Docker
 
-Build the Docker image locally:
+Build the current version locally:
 
 ```bash
 docker build -t virtual-diabetes-triage:v0.2 .
 ```
 
-Run the container:
+Run it:
 
 ```bash
 docker run --rm -p 80:80 virtual-diabetes-triage:v0.2
@@ -162,24 +194,68 @@ Test it:
 curl http://localhost:80/health
 ```
 
-## Published Docker Image
+## Published Docker Images
 
-The v0.2 image is publicly available from GitHub Container Registry:
+Both released Docker images are publicly available from GitHub Container Registry.
+
+### v0.1
+
+Pull the image:
+
+```bash
+docker pull ghcr.io/mgurluler85/virtual-diabetes-triage:v0.1
+```
+
+Run the container:
+
+```bash
+docker run -it -p 80:80 ghcr.io/mgurluler85/virtual-diabetes-triage:v0.1
+```
+
+Health check:
+
+```bash
+curl http://localhost:80/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "model_version": "v0.1"
+}
+```
+
+Stop the v0.1 container before starting v0.2 because both versions use port 80.
+
+### v0.2
+
+Pull the image:
 
 ```bash
 docker pull ghcr.io/mgurluler85/virtual-diabetes-triage:v0.2
 ```
 
-Run the published image:
+Run the container:
 
 ```bash
-docker run --rm -p 80:80 ghcr.io/mgurluler85/virtual-diabetes-triage:v0.2
+docker run -it -p 80:80 ghcr.io/mgurluler85/virtual-diabetes-triage:v0.2
 ```
 
-Then test:
+Health check:
 
 ```bash
 curl http://localhost:80/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "model_version": "v0.2"
+}
 ```
 
 ## CI/CD
@@ -200,20 +276,59 @@ When a Git tag matching `v*` is pushed, the release workflow:
 - starts the container;
 - smoke-tests `/health`;
 - smoke-tests `/predict`;
-- verifies invalid input returns HTTP 422;
-- pushes the versioned image to GitHub Container Registry;
+- verifies that a request with missing `s6` returns HTTP 422;
+- pushes the versioned Docker image to GitHub Container Registry;
 - creates a GitHub Release.
 
 ## Reproducibility
 
 The project uses:
 
-- pinned Python dependencies in `requirements.txt`;
-- a fixed `random_state=42`;
-- a fixed 80/20 train-test split;
-- saved model metrics in `artifacts/metrics.json`;
-- versioned Docker images.
+- pinned dependency versions in `requirements.txt`;
+- `random_state=42` for the train-test split;
+- the same fixed 80/20 split for model comparison;
+- versioned model metrics;
+- versioned Docker images;
+- automated tests and training in GitHub Actions.
+
+The v0.2 model can be reproduced locally with:
+
+```bash
+python src/train.py
+```
+
+The resulting metrics are saved to:
+
+```text
+artifacts/metrics.json
+```
+
+## Version History
+
+### v0.1
+
+Baseline release using StandardScaler and LinearRegression.
+
+Held-out test RMSE:
+
+```text
+53.8534
+```
+
+### v0.2
+
+Improved release using StandardScaler and Ridge regression with `alpha=1.0`.
+
+Held-out test RMSE:
+
+```text
+53.7775
+```
+
+RandomForestRegressor was also evaluated with an RMSE of `54.4612`. Ridge was selected because it achieved the lowest held-out RMSE among the evaluated models.
+
+See `CHANGELOG.md` for detailed version changes.
 
 ## Disclaimer
 
-The scikit-learn Diabetes dataset is used only as a stand-in for de-identified EHR data. This project is for educational purposes and must not be used for real clinical decision-making.
+This project is for educational purposes only and must not be used for clinical decision-making.
